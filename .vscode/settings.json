@@ -1,0 +1,13 @@
+{
+    "files.associations": {
+        "pcap.h": "c",
+        "stdint.h": "c",
+        "defs.h": "c",
+        "ether.h": "c",
+        "if_ether.h": "c",
+        "features.h": "c",
+        "ifaddrs.h": "c",
+        "socket.h": "c",
+        "packet.h": "c"
+    }
+}
