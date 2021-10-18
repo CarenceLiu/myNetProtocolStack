@@ -10,6 +10,7 @@
 #include "defs.h"
 #include "utils.h"
 #include "device.h"
+#include "packetio.h"
 
 struct frameInfo{
     char * frame;
@@ -17,6 +18,9 @@ struct frameInfo{
 };
 
 typedef struct frameInfo frameInfo_t;
+
+extern device_t *currDevices[];
+extern hostInfo_t host;
 
 uint16_t changeTypeEndian(uint16_t n){
     uint16_t ret = ((n&0xff)<<8)|((n&(0xff<<8))>>8);
@@ -28,10 +32,25 @@ frameInfo_t buildFrame(const void * buf, int len, int ethtype, const void * dest
     uint16_t type = changeTypeEndian(ethtype);
     ethFrame.frameLength = len+sizeof(eth_hdr_t)+sizeof(checksum_t);
     ethFrame.frame = malloc(ethFrame.frameLength);
-    memset(ethFrame.frame,0,sizeof(ethFrame.frame));
+    memset(ethFrame.frame,0,ethFrame.frameLength);
+    memcpy(ethFrame.frame,destmac,6);
+    memcpy(ethFrame.frame+6,currDevices[id]->mac,6);
+    memcpy(ethFrame.frame+12,&type,2);
+    memcpy(ethFrame.frame+14,buf,len);
+    //last 4 bytes are 0, checksum
 
+    return ethFrame;
 }
 
 int sendFrame(const void * buf, int len, int ethtype, const void * destmac, int id){
-    
+    frameInfo_t ethFrame = buildFrame(buf,len,ethtype,destmac,id);
+    int ret = pcap_sendpacket(currDevices[id]->pcapHandler,ethFrame.frame,ethFrame.frameLength);
+    free(ethFrame.frame);
+    return ret;
+}
+
+
+int setFrameReceiveCallback(frameReceiveCallback callback){
+    host.frameCallback = callback;
+    return 0;
 }

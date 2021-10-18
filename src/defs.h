@@ -15,6 +15,12 @@
 
 typedef int deviceID_t;
 typedef uint32_t ipv4_t;
+typedef int (*frameReceiveCallback) (const void *, int, int);
+
+struct hostInfo{
+    frameReceiveCallback frameCallback;
+};
+typedef struct hostInfo hostInfo_t;
 
 //device_t defination
 
