@@ -2,7 +2,7 @@
 * @file packetio.c
 * @author: Wenrui Liu
 * @date: 2021-10-16 
-* @lastEdit: 2021-10-17
+* @lastEdit: 2021-10-19
 * @brief supporting sending/receiving Ethernet II frames.
 */
 #include<netinet/ether.h>
@@ -54,3 +54,10 @@ int setFrameReceiveCallback(frameReceiveCallback callback){
     host.frameCallback = callback;
     return 0;
 }
+
+// int main(){
+//     addDevice("lo");
+//     addDevice("ens33");
+//     sendFrame("hello",5,0,currDevices[0]->mac,0);
+//     return 0;
+// }

@@ -2,7 +2,7 @@
 * @file device.h
 * @author: Wenrui Liu
 * @date: 2021-10-16 
-* @lastEdit: 2021-10-17
+* @lastEdit: 2021-10-19
 * @ define and typedef library.
 */
 #include<string.h>
