@@ -1,7 +1,6 @@
 /*
 * @file packetio.c
 * @author: Wenrui Liu
-* @date: 2021-10-16 
 * @lastEdit: 2021-10-19
 * @brief supporting sending/receiving Ethernet II frames.
 */

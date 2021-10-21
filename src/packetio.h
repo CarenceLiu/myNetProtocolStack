@@ -1,7 +1,6 @@
 /* *
 * @file packetio.h
 * @author: Wenrui Liu
-* @date: 2021-10-16 
 * @lastEdit: 2021-10-17
 * @brief Library supporting sending/receiving Ethernet II frames.
 */

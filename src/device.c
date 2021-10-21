@@ -1,7 +1,6 @@
 /* *
 * @file device.c
 * @author: Wenrui Liu
-* @date: 2021-10-16 
 * @lastEdit: 2021-10-19
 */
 
@@ -121,6 +120,24 @@ int findDevice(const char * device){
 
 //add all device in currDevices and print them, just for CP1
 void showAllDevice(){
+
+    //way 1 segmentation fault
+    // char err[PCAP_ERRBUF_SIZE];
+    // pcap_if_t * ifaddr,*ifa;
+    // if(pcap_findalldevs(&ifaddr,err) < 0){
+    //     return;
+    // }
+    // for(ifa = ifaddr; ifa ;ifa = ifa->next){
+    //         struct sockaddr * tmp = ifa->addresses->addr;
+    //         if(tmp->sa_family == AF_PACKET){
+    //             printf("Name: %s\n",ifa->name);
+    //             printf("MAC: %02X:%02X:%02X:%02X:%02X:%02X\n",tmp->sa_data[0],
+    //             tmp->sa_data[1],tmp->sa_data[2],tmp->sa_data[3],
+    //             tmp->sa_data[4],tmp->sa_data[5]);
+    //         }
+    // }
+
+    //way 2
     struct ifaddrs *ifaddr = NULL,*ifa;
     if(getifaddrs(&ifaddr) == -1){
         fprintf(stderr,"[device.c getMac]\n");
@@ -132,7 +149,6 @@ void showAllDevice(){
         if(ifa->ifa_addr->sa_family == AF_PACKET)
             addDevice(ifa->ifa_name);
     }
-
     for(int i = 0; i < MAX_DEVICE_NUM; i += 1){
         if(currDevices[i]){
             printf("[device: %d]\n",currDevices[i]->id);
