@@ -1,10 +1,9 @@
 /* *
 * @file device.c
 * @author: Wenrui Liu
-* @lastEdit: 2021-10-19
+* @lastEdit: 2021-10-25
 */
 
-#include<pcap/pcap.h>
 #include<ifaddrs.h>
 #include<netpacket/packet.h>
 #include "defs.h"
@@ -160,7 +159,91 @@ void showAllDevice(){
     }
 }
 
+int addAllDevices(){
+    struct ifaddrs *ifaddr = NULL,*ifa;
+    pcap_t *handler = NULL;
+    int ret = 0;
+    char errBuf[PCAP_ERRBUF_SIZE]= {};
+    if(getifaddrs(&ifaddr) == -1){
+        fprintf(stderr,"[device.c getMac]\n");
+        fprintf(stderr,"Error: getifaddrs error\n");
+        return -1;
+    }
+    for(ifa = ifaddr; ifa; ifa=ifa->ifa_next){
+        if(ifa->ifa_addr->sa_family == AF_PACKET){
+            int flag = 0;
+
+            //if added?
+            for(int i = 0; i < MAX_DEVICE_NUM; i += 1){
+                if(currDevices[i]){
+                    if(!strcmp(ifa->ifa_name,currDevices[i]->deviceName)){
+                        flag = 1;
+                        break;
+                    }
+                }
+            }
+            if(flag)
+                continue;
+
+            //create pcap handler
+            handler = pcap_create(ifa->ifa_name,errBuf);
+
+            if(handler == NULL){
+                fprintf(stderr,"[device.c addDevice]\n");
+                fprintf(stderr,"Error: pcap_create error, %s\n",errBuf);
+                ret = -1;
+            }
+
+            ret = pcap_activate(handler);
+            if(ret < 0){
+                fprintf(stderr,"[device.c addDevice]\n");
+                fprintf(stderr,"Error: pcap_activate error\n");
+                pcap_close(handler);
+                ret = -1;
+            }
+            
+            //find a position
+            int position = -1;
+            for(int i = 0; i < MAX_DEVICE_NUM; i +=1){
+                if(!currDevices[i]){
+                    position = i;
+                    break;
+                }
+            }
+
+            currDevices[position] = malloc(sizeof(device_t));
+            struct sockaddr_ll *sockAddr = (struct sockaddr_ll*)(ifa->ifa_addr);
+
+            //set information
+            currDevices[position]->id = position;
+            currDevices[position]->pcapHandler = handler;
+            currDevices[position]->ip = 0;
+            memcpy(currDevices[position]->mac,sockAddr->sll_addr,6);
+            memcpy(currDevices[position]->pcapErrBuf,errBuf,PCAP_ERRBUF_SIZE);
+
+            if(MAX_DEVICE_NAME_LENGTH < strlen(ifa->ifa_name)+1){
+                fprintf(stderr,"[device.c addDevice]\n");
+                fprintf(stderr,"Error: device name is too long\n");
+                pcap_close(handler);
+                free(currDevices[position]);
+                currDevices[position] = NULL;
+            }
+
+            memcpy(currDevices[position]->deviceName,ifa->ifa_name,strlen(ifa->ifa_name)+1);
+
+            printf("MAC: %02X:%02X:%02X:%02X:%02X:%02X\n",sockAddr->sll_addr[0],
+            sockAddr->sll_addr[1],sockAddr->sll_addr[2],sockAddr->sll_addr[3],
+            sockAddr->sll_addr[4],sockAddr->sll_addr[5]);
+            if(ret != -1)
+                ret += 1;
+        }
+    }
+    return ret;
+}
+
+
+
 // int main(){
-//     showAllDevice();
+//     addAllDevices();
 //     return 0;
 // }

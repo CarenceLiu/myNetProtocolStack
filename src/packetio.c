@@ -5,7 +5,6 @@
 * @brief supporting sending/receiving Ethernet II frames.
 */
 #include<netinet/ether.h>
-#include<pcap.h>
 #include "defs.h"
 #include "utils.h"
 #include "device.h"
@@ -31,6 +30,7 @@ frameInfo_t buildFrame(const void * buf, int len, int ethtype, const void * dest
     uint16_t type = changeTypeEndian(ethtype);
     ethFrame.frameLength = len+sizeof(eth_hdr_t)+sizeof(checksum_t);
     ethFrame.frame = malloc(ethFrame.frameLength);
+    
     memset(ethFrame.frame,0,ethFrame.frameLength);
     memcpy(ethFrame.frame,destmac,6);
     memcpy(ethFrame.frame+6,currDevices[id]->mac,6);
