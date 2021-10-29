@@ -169,6 +169,8 @@ int addAllDevices(){
         fprintf(stderr,"Error: getifaddrs error\n");
         return -1;
     }
+
+    //add device
     for(ifa = ifaddr; ifa; ifa=ifa->ifa_next){
         if(ifa->ifa_addr->sa_family == AF_PACKET){
             int flag = 0;
@@ -231,11 +233,22 @@ int addAllDevices(){
 
             memcpy(currDevices[position]->deviceName,ifa->ifa_name,strlen(ifa->ifa_name)+1);
 
-            printf("MAC: %02X:%02X:%02X:%02X:%02X:%02X\n",sockAddr->sll_addr[0],
-            sockAddr->sll_addr[1],sockAddr->sll_addr[2],sockAddr->sll_addr[3],
-            sockAddr->sll_addr[4],sockAddr->sll_addr[5]);
+            // printf("MAC: %02X:%02X:%02X:%02X:%02X:%02X\n",sockAddr->sll_addr[0],
+            // sockAddr->sll_addr[1],sockAddr->sll_addr[2],sockAddr->sll_addr[3],
+            // sockAddr->sll_addr[4],sockAddr->sll_addr[5]);
             if(ret != -1)
                 ret += 1;
+        }
+    }
+
+    //add ip address
+    for(ifa = ifaddr; ifa; ifa=ifa->ifa_next){
+        if(ifa->ifa_addr->sa_family == AF_INET){
+            int id = findDevice(ifa->ifa_name);
+            if(id != -1){
+                struct sockaddr_in *sockAddr = (struct sockaddr_in*)(ifa->ifa_addr);
+                currDevices[id]->ip = sockAddr->sin_addr.s_addr;
+            }
         }
     }
     return ret;
@@ -245,5 +258,13 @@ int addAllDevices(){
 
 // int main(){
 //     addAllDevices();
+//     for(int i = 0; i < MAX_DEVICE_NUM; i += 1){
+//         if(currDevices[i]){
+//             printf("%s\n",currDevices[i]->deviceName);
+//             printf("%d.%d.%d.%d\n",((currDevices[i]->ip)>>24)&0xff,
+//             ((currDevices[i]->ip)>>16)&0xff,((currDevices[i]->ip)>>8)&0xff,
+//             ((currDevices[i]->ip))&0xff);
+//         }
+//     }
 //     return 0;
 // }

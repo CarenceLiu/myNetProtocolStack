@@ -6,7 +6,6 @@
 */
 #include<netinet/ether.h>
 #include "defs.h"
-#include "utils.h"
 #include "device.h"
 #include "packetio.h"
 
@@ -45,6 +44,7 @@ int sendFrame(const void * buf, int len, int ethtype, const void * destmac, int 
     frameInfo_t ethFrame = buildFrame(buf,len,ethtype,destmac,id);
     int ret = pcap_sendpacket(currDevices[id]->pcapHandler,ethFrame.frame,ethFrame.frameLength);
     free(ethFrame.frame);
+    //this step needs more investigation
     return ret;
 }
 

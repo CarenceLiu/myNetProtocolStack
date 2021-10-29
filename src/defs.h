@@ -1,7 +1,7 @@
 /* *
 * @file device.h
 * @author: Wenrui Liu
-* @lastEdit: 2021-10-25
+* @lastEdit: 2021-10-28
 * @ define and typedef library.
 */
 #include<string.h>
@@ -11,9 +11,15 @@
 #include<pcap.h>
 #include<pthread.h>
 
-#define MAX_DEVICE_NUM 256
+#define MAX_DEVICE_NUM 10
 #define MAX_DEVICE_NAME_LENGTH 100
-#define MAX_ROUTE_TABLE_LENGTH 1024
+#define MAX_ROUTE_TABLE_LENGTH 128
+#define MAX_BUFFER_SIZE 1024
+#define DV_PROTOCOL 0xff
+#define ETH_TYPE 0X0800
+#define TTL_DEFAULT 16
+#define true 1
+#define false 0
 
 typedef int deviceID_t;
 typedef uint32_t ipv4_t;
@@ -69,8 +75,9 @@ typedef struct ip_hdr ip_hdr_t;
 struct rte{
     ipv4_t dst;
     ipv4_t mask;
-    ipv4_t next_hop_ip;
     uint8_t next_hop_mac[6];
+    int distance;
+    int src_device_id;
     int ttl;
 };
 
@@ -82,3 +89,16 @@ struct routeTable{
 };
 
 typedef struct routeTable routeTable_t;
+
+
+//for a DVPacket, some DVInfo packets are the content
+//record the send mac's infomation
+
+//DV packet content
+struct DVInfo{
+    ipv4_t dst;
+    ipv4_t mask;
+    int distance;
+};
+
+typedef struct DVInfo DVInfo_t;
