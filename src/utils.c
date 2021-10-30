@@ -11,25 +11,30 @@ int initBuffer(buffer_t *buffer){
     return 0;
 }
 
-char * pop(buffer_t * buf){
-    char * tmp = NULL;
+packet_t pop(buffer_t * buf){
+    packet_t ret;
     pthread_mutex_lock(&(buf->mutex));
     while(empty(buf)){
         pthread_cond_wait(&(buf->empty_cond),&(buf->mutex));
     }
-    tmp = buf->buffer[buf->start];
-    buf->start = (buf->start+1)%MAX_ROUTE_TABLE_LENGTH;
+    ret.packet = buf->buffer[buf->start].packet;
+    ret.len = buf->buffer[buf->start].len;
+    ret.device_id = buf->buffer[buf->start].device_id;
+    buf->start = (buf->start+1)%MAX_BUFFER_SIZE;
     pthread_cond_signal(&(buf->empty_cond));
     pthread_mutex_unlock(&(buf->mutex));
-    return tmp;
+    return ret;
 }
 
-void push(buffer_t * buf,char * packet){
+void push(buffer_t * buf,packet_t packet){
     pthread_mutex_lock(&(buf->mutex));
     while(full(buf)){
         pthread_cond_wait(&(buf->full_cond),&(buf->mutex));
     }
-    buf->buffer[buf->end] = packet;
+    buf->buffer[buf->end].len = packet.len;
+    buf->buffer[buf->end].packet = packet.packet;
+    buf->buffer[buf->end].device_id = packet.device_id;
+    buf->end = (buf->end+1)%MAX_BUFFER_SIZE;
     pthread_cond_signal(&(buf->full_cond));
     pthread_mutex_unlock(&(buf->mutex));
     return;
@@ -40,5 +45,5 @@ int empty(buffer_t * buf){
 }
 
 int full(buffer_t * buf){
-    return (buf->start+MAX_ROUTE_TABLE_LENGTH-1-buf->end)%MAX_ROUTE_TABLE_LENGTH == 0;
+    return (buf->start+MAX_BUFFER_SIZE-1-buf->end)%MAX_BUFFER_SIZE == 0;
 }

@@ -26,12 +26,6 @@ typedef uint32_t ipv4_t;
 typedef int (*frameReceiveCallback) (const void *, int, int);
 typedef int (*IPPacketReceiveCallback) (const void *, int);
 
-struct hostInfo{
-    frameReceiveCallback frameCallback;
-    IPPacketReceiveCallback ipCallback;
-};
-typedef struct hostInfo hostInfo_t;
-
 //device_t defination
 
 struct device{
@@ -102,3 +96,35 @@ struct DVInfo{
 };
 
 typedef struct DVInfo DVInfo_t;
+
+struct pcapPacket{
+    char * packet;
+    int len;
+    int device_id;
+};
+
+typedef struct pcapPacket packet_t;
+
+struct bufferQueue{
+    packet_t buffer[MAX_BUFFER_SIZE];
+    pthread_mutex_t mutex;
+    pthread_cond_t full_cond;
+    pthread_cond_t empty_cond;
+    int start;
+    int end;
+};
+
+typedef struct bufferQueue buffer_t;
+
+
+struct hostInfo{
+    frameReceiveCallback frameCallback;
+    IPPacketReceiveCallback ipCallback;
+};
+typedef struct hostInfo hostInfo_t;
+
+struct routerInfo{
+    frameReceiveCallback frameCallback;
+    buffer_t packetBuffer;
+};
+typedef struct routerInfo routerInfo_t;
