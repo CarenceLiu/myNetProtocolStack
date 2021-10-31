@@ -65,6 +65,7 @@ int addDevice(const char * device){
     //find an available position for this device
     for(int i = 0; i < MAX_DEVICE_NUM; i++){
         if(currDevices[i] == NULL){
+            
             currDevices[i] = malloc(sizeof(device_t));
             uint8_t *mac = getMac(device);
 
@@ -83,7 +84,6 @@ int addDevice(const char * device){
             currDevices[i]->ip = 0;
             memcpy(currDevices[i]->mac,mac,6);
             free(mac);
-            memcpy(currDevices[i]->pcapErrBuf,errBuf,PCAP_ERRBUF_SIZE);
 
             if(MAX_DEVICE_NAME_LENGTH < strlen(device)+1){
                 fprintf(stderr,"[device.c addDevice]\n");
@@ -184,24 +184,26 @@ int addAllDevices(){
                     }
                 }
             }
-            if(flag)
+            if(flag||!strcmp("lo",ifa->ifa_name))
                 continue;
 
             //create pcap handler
             handler = pcap_create(ifa->ifa_name,errBuf);
-
-            if(handler == NULL&&TEST_MODE){
+            if(handler == NULL){
                 fprintf(stderr,"[device.c addDevice]\n");
                 fprintf(stderr,"Error: pcap_create error, %s\n",errBuf);
                 ret = -1;
+                continue;
             }
-
+            pcap_set_promisc(handler,1);
+            pcap_set_timeout(handler,500);
             ret = pcap_activate(handler);
-            if(ret < 0&&TEST_MODE){
+            if(ret < 0){
                 fprintf(stderr,"[device.c addDevice]\n");
-                fprintf(stderr,"Error: pcap_activate error\n");
+                fprintf(stderr,"Error: pcap_activate error %d\n",ret);
                 pcap_close(handler);
                 ret = -1;
+                continue;
             }
             
             //find a position
@@ -213,10 +215,10 @@ int addAllDevices(){
                 }
             }
 
-            currDevices[position] = malloc(sizeof(device_t));
-            if(TEST_MODE){
-                printf("[device.c] addAllDevices position %d malloc %d bytes\n",position,(int)sizeof(device_t));
+            if(TEST_MODE == 2|| TEST_MODE >=8){
+                printf("[device.c] addAllDevices position %d malloc\n",position);
             }
+            currDevices[position] = malloc(sizeof(device_t));
             struct sockaddr_ll *sockAddr = (struct sockaddr_ll*)(ifa->ifa_addr);
 
             //set information
@@ -224,7 +226,6 @@ int addAllDevices(){
             currDevices[position]->pcapHandler = handler;
             currDevices[position]->ip = 0;
             memcpy(currDevices[position]->mac,sockAddr->sll_addr,6);
-            memcpy(currDevices[position]->pcapErrBuf,errBuf,PCAP_ERRBUF_SIZE);
 
             if(MAX_DEVICE_NAME_LENGTH < strlen(ifa->ifa_name)+1){
                 fprintf(stderr,"[device.c addDevice]\n");
@@ -241,6 +242,9 @@ int addAllDevices(){
             // sockAddr->sll_addr[4],sockAddr->sll_addr[5]);
             if(ret != -1)
                 ret += 1;
+            if(TEST_MODE == 2|| TEST_MODE >=8){
+                printf("[device.c] addAllDevices position %d finish\n",position);
+            }
         }
     }
 
@@ -255,7 +259,7 @@ int addAllDevices(){
         }
     }
 
-    if(TEST_MODE){
+    if(TEST_MODE == 2|| TEST_MODE >=8){
         printf("[device.c] addAllDevices finish\n");
     }
     return ret;

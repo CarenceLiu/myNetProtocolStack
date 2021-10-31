@@ -10,7 +10,7 @@
 #include "packetio.h"
 
 struct frameInfo{
-    char * frame;
+    u_char * frame;
     int frameLength;
 };
 
@@ -28,6 +28,9 @@ frameInfo_t buildFrame(const void * buf, int len, int ethtype, const void * dest
     frameInfo_t ethFrame;
     uint16_t type = changeTypeEndian(ethtype);
     ethFrame.frameLength = len+sizeof(eth_hdr_t)+sizeof(checksum_t);
+    if(TEST_MODE == 3|| TEST_MODE >=8){
+        printf("[packetio.c] buildFrame malloc\n");
+    }
     ethFrame.frame = malloc(ethFrame.frameLength);
     
     memset(ethFrame.frame,0,ethFrame.frameLength);
@@ -42,6 +45,10 @@ frameInfo_t buildFrame(const void * buf, int len, int ethtype, const void * dest
 
 int sendFrame(const void * buf, int len, int ethtype, const void * destmac, int id){
     frameInfo_t ethFrame = buildFrame(buf,len,ethtype,destmac,id);
+    // for(int i = 0; i < ethFrame.frameLength; i+= 1){
+    //     printf("%02x ",ethFrame.frame[i]);
+    // }
+    // printf("\n");
     int ret = pcap_sendpacket(currDevices[id]->pcapHandler,ethFrame.frame,ethFrame.frameLength);
     free(ethFrame.frame);
     //this step needs more investigation

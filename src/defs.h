@@ -17,10 +17,11 @@
 #define MAX_BUFFER_SIZE 1024
 #define DV_PROTOCOL 0xff
 #define ETH_TYPE 0X0800
-#define TTL_DEFAULT 16
+#define PACKET_TTL_DEFAULT 16
+#define RTE_TTL_DEFAULT 25
 #define true 1
 #define false 0
-#define TEST_MODE 1
+#define TEST_MODE 0
 
 typedef int deviceID_t;
 typedef uint32_t ipv4_t;
@@ -34,7 +35,6 @@ struct device{
     pcap_t *pcapHandler;
     uint8_t mac[6];
     ipv4_t ip;
-    char pcapErrBuf[MAX_DEVICE_NUM];
     char deviceName[MAX_DEVICE_NAME_LENGTH];
 };
 
@@ -99,7 +99,7 @@ struct DVInfo{
 typedef struct DVInfo DVInfo_t;
 
 struct pcapPacket{
-    char * packet;
+    u_char * packet;
     int len;
     int device_id;
 };
