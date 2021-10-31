@@ -49,10 +49,10 @@ int sendFrame(const void * buf, int len, int ethtype, const void * destmac, int 
 }
 
 
-int setFrameReceiveCallback(frameReceiveCallback callback){
-    host.frameCallback = callback;
-    return 0;
-}
+// int setFrameReceiveCallback(frameReceiveCallback callback){
+//     host.frameCallback = callback;
+//     return 0;
+// }
 
 // int main(){
 //     addDevice("lo");

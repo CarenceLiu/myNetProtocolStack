@@ -39,6 +39,6 @@ Ethernet II frame was received .
 * @return 0 on success , -1 on error .
 * @see frameReceiveCallback
 */
-int setFrameReceiveCallback(frameReceiveCallback callback);
+// int setFrameReceiveCallback(frameReceiveCallback callback);
 
 uint16_t changeTypeEndian(uint16_t n);
