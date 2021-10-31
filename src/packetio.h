@@ -41,3 +41,4 @@ Ethernet II frame was received .
 */
 int setFrameReceiveCallback(frameReceiveCallback callback);
 
+uint16_t changeTypeEndian(uint16_t n);

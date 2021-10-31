@@ -190,14 +190,14 @@ int addAllDevices(){
             //create pcap handler
             handler = pcap_create(ifa->ifa_name,errBuf);
 
-            if(handler == NULL){
+            if(handler == NULL&&TEST_MODE){
                 fprintf(stderr,"[device.c addDevice]\n");
                 fprintf(stderr,"Error: pcap_create error, %s\n",errBuf);
                 ret = -1;
             }
 
             ret = pcap_activate(handler);
-            if(ret < 0){
+            if(ret < 0&&TEST_MODE){
                 fprintf(stderr,"[device.c addDevice]\n");
                 fprintf(stderr,"Error: pcap_activate error\n");
                 pcap_close(handler);
@@ -214,6 +214,9 @@ int addAllDevices(){
             }
 
             currDevices[position] = malloc(sizeof(device_t));
+            if(TEST_MODE){
+                printf("[device.c] addAllDevices position %d malloc %d bytes\n",position,(int)sizeof(device_t));
+            }
             struct sockaddr_ll *sockAddr = (struct sockaddr_ll*)(ifa->ifa_addr);
 
             //set information
@@ -250,6 +253,10 @@ int addAllDevices(){
                 currDevices[id]->ip = sockAddr->sin_addr.s_addr;
             }
         }
+    }
+
+    if(TEST_MODE){
+        printf("[device.c] addAllDevices finish\n");
     }
     return ret;
 }

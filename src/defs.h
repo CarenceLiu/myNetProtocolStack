@@ -20,6 +20,7 @@
 #define TTL_DEFAULT 16
 #define true 1
 #define false 0
+#define TEST_MODE 1
 
 typedef int deviceID_t;
 typedef uint32_t ipv4_t;
@@ -120,6 +121,7 @@ typedef struct bufferQueue buffer_t;
 struct hostInfo{
     frameReceiveCallback frameCallback;
     IPPacketReceiveCallback ipCallback;
+    buffer_t packetBuffer;
 };
 typedef struct hostInfo hostInfo_t;
 
