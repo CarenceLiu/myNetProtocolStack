@@ -93,6 +93,7 @@ typedef struct routeTable routeTable_t;
 struct DVInfo{
     ipv4_t dst;
     ipv4_t mask;
+    uint8_t next_hop_mac[6];
     int distance;
 };
 
