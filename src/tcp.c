@@ -36,6 +36,7 @@ uint16_t set_ACK(uint16_t flag){
 //! the buf can be NULL
 segment_t buildTCPPacket(int sockfd,const void *buf,int len,
                 uint32_t seq_num,uint32_t ack_num,uint16_t flag){
+    sockfd = sockfd-SOCKFD_OFFSET;
     segment_t segment;
     tcp_hdr_t hdr;
     segment.len = len+sizeof(tcp_hdr_t);
@@ -55,7 +56,8 @@ segment_t buildTCPPacket(int sockfd,const void *buf,int len,
 //only care about sending TCP Packet, don't care about alarming 
 int sendTCPPacket(int sockfd,const void *buf,int len,
                 uint32_t seq_num,uint32_t ack_num,uint16_t flag){
-    if(!sockets[sockfd-SOCKFD_OFFSET]){
+    sockfd = sockfd-SOCKFD_OFFSET;
+    if(!sockets[sockfd]){
         if(TEST_MODE == 5||TEST_MODE >= 8)
             printf("sockfd doesn't exist\n");
         return -1;
@@ -70,6 +72,7 @@ int sendTCPPacket(int sockfd,const void *buf,int len,
 }
 
 int parseTCPPacket(int sockfd,packet_t packet,ip_hdr_t ipHdr,tcp_hdr_t tcpHdr){
+    sockfd = sockfd-SOCKFD_OFFSET;
     int state = sockets[sockfd]->state;
     uint32_t seq = ntohl(tcpHdr.seq_num);
     uint32_t ack = ntohl(tcpHdr.ack_num);
@@ -127,8 +130,19 @@ int parseTCPPacket(int sockfd,packet_t packet,ip_hdr_t ipHdr,tcp_hdr_t tcpHdr){
         else if(state == LAST_ACK){
             sockets[sockfd]->state = CLOSED;
         }
-        else{
-            TCPACKHandler(sockfd,packet,ipHdr,tcpHdr);
+        else if(state == ESTABLISHED){
+            int hdrLen = sizeof(eth_hdr_t)+sizeof(ip_hdr_t)+sizeof(tcp_hdr_t);
+            int cLen = packet.len-hdrLen-sizeof(checksum_t);
+            if(cLen > 0){
+                write_rw_buf(&(sockets[sockfd]->receive_buf),packet.packet+hdrLen,cLen);
+            }
+            if(cLen < 0)
+                return -1;
+            segment_t content = read_rw_buf_nowait_new(&(sockets[sockfd]->send_buf));
+            if(content.len > 0){
+                sendTCPPacket(sockfd,content.buf,content.len,ack,seq+cLen,0);
+            }
+            free(content.buf);
         }
     }
     else{   //a data packet. copy

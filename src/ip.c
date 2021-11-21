@@ -501,3 +501,13 @@ void broadcast(packet_t packet){
         }
     }
 }
+
+int check_ipv4_available(uint32_t ip_addr){
+    for(int i = 0; i < MAX_DEVICE_NUM; i += 1){
+        if(currDevices[i]){
+            if(currDevices[i]->ip == ip_addr)
+                return 1;
+        }
+    }
+    return 0;
+}

@@ -197,9 +197,9 @@ typedef struct tcp_hdr tcp_hdr_t;
 #define FIN_WAIT_2 9
 #define TIME_WAIT 10
 
-// #define CLIENT 1
-// #define SERVER 2
-// #define UNDECIDED 0
+#define CLIENT 1
+#define SERVER 2
+#define UNDECIDED 0
 
 struct connectInfo{
     uint32_t srcaddr;
@@ -234,7 +234,6 @@ struct socketInfo
     sockBuffer_t segmentBuff;
     
     int state;
-    // int side;
     int domain;
     int type;
     int protocol;
