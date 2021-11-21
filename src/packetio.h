@@ -1,7 +1,6 @@
 /* *
 * @file packetio.h
 * @author: Wenrui Liu
-* @date: 2021-10-16 
 * @lastEdit: 2021-10-17
 * @brief Library supporting sending/receiving Ethernet II frames.
 */
@@ -24,10 +23,8 @@ int sendFrame(const void * buf, int len, int ethtype, const void * destmac, int 
 *
 * @param buf Pointer to the frame .
 * @param len Length of the frame .
-* @param id ID of the device ( returned by ‘ addDevice ‘) receiving
-*
-current frame .
-* @return 0 on success , -1 on error .
+* @param id ID of the device ( returned by ‘ addDevice ‘) receiving current frame.
+* @return 0 on success, -1 on error .
 * @see addDevice
 */
 typedef int (*frameReceiveCallback) (const void *, int, int);
@@ -42,5 +39,6 @@ Ethernet II frame was received .
 * @return 0 on success , -1 on error .
 * @see frameReceiveCallback
 */
-int setFrameReceiveCallback(frameReceiveCallback callback);
+// int setFrameReceiveCallback(frameReceiveCallback callback);
 
+uint16_t changeTypeEndian(uint16_t n);

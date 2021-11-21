@@ -8,6 +8,9 @@
         "features.h": "c",
         "ifaddrs.h": "c",
         "socket.h": "c",
-        "packet.h": "c"
+        "packet.h": "c",
+        "ip.h": "c",
+        "types.h": "c",
+        "netdb.h": "c"
     }
 }

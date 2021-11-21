@@ -1,8 +1,7 @@
 /* *
 * @file device.h
 * @author: Wenrui Liu
-* @date: 2021-10-16 
-* @lastEdit: 2021-10-17
+* @lastEdit: 2021-10-25
 * @brief Library supporting network device management .
 */
 
@@ -24,3 +23,10 @@ int addDevice(const char * device);
 */
 int findDevice(const char * device);
 
+
+/*
+* add all available devices
+*
+* @return non-negative the number of devices added. -1 error occured.
+*/
+int addAllDevices();
