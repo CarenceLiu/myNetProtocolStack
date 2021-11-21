@@ -170,7 +170,8 @@ void initrwBuffer(rw_buffer_t * buf){
     buf->start = 0;
     buf->size = 0;
     pthread_mutex_init(&(buf->lock),NULL);
-    pthread_cond_init(&(buf->cond),NULL);
+    pthread_cond_init(&(buf->empty),NULL);
+    pthread_cond_init(&(buf->full),NULL);
 }
 
 int read_rw_buf_nowait_to(rw_buffer_t *buf,u_char * buf_aim,int len){
@@ -193,12 +194,13 @@ int read_rw_buf_nowait_to(rw_buffer_t *buf,u_char * buf_aim,int len){
     }
 
     buf->start = (buf->start+size)%MAX_RW_BUFFER_SIZE;
+    if(buf->size == MAX_RW_BUFFER_SIZE)
+        pthread_cond_signal(&(buf->full));
     buf->size -= size;
     if(buf->size == 0){     //the buf is empty, refresh all buf
         buf->start = 0;
         buf->end = 0;
     }
-    pthread_cond_signal(&(buf->cond));
     pthread_mutex_unlock(&(buf->lock));
     return size;
 }
@@ -228,12 +230,13 @@ segment_t read_rw_buf_nowait_new(rw_buffer_t * buf){
     }
 
     buf->start = (buf->start+size)%MAX_RW_BUFFER_SIZE;
+    if(buf->size == MAX_RW_BUFFER_SIZE)
+        pthread_cond_signal(&(buf->full));
     buf->size -= size;
     if(buf->size == 0){     //the buf is empty, refresh all buf
         buf->start = 0;
         buf->end = 0;
     }
-    pthread_cond_signal(&(buf->cond));
     pthread_mutex_unlock(&(buf->lock));
     return segment;
 }
@@ -241,7 +244,7 @@ segment_t read_rw_buf_nowait_new(rw_buffer_t * buf){
 void write_rw_buf(rw_buffer_t * buf, u_char * buf_src,int len){
     pthread_mutex_lock(&(buf->lock));
     while(buf->size + len > MAX_CONTENT_LENGTH){
-        pthread_cond_wait(&(buf->cond),&(buf->lock));
+        pthread_cond_wait(&(buf->full),&(buf->lock));
     }
     int partition = 0;
     if(buf->end+len > MAX_RW_BUFFER_SIZE){
@@ -256,7 +259,48 @@ void write_rw_buf(rw_buffer_t * buf, u_char * buf_src,int len){
     }
 
     buf->end = (buf->end+len)%MAX_RW_BUFFER_SIZE;
+    if(buf->size == 0)
+        pthread_cond_signal(&(buf->empty));
     buf->size += len;
     pthread_mutex_unlock(&(buf->lock));
     return;
+}
+
+segment_t read_rw_buf_block_new(rw_buffer_t * buf){
+    pthread_mutex_lock(&(buf->lock));
+    while(buf->size == 0){
+        pthread_cond_wait(&(buf->empty),&(buf->lock));
+    }
+    int size = buf->size > MAX_CONTENT_LENGTH? MAX_CONTENT_LENGTH:buf->size;
+    segment_t segment;
+    if(size == 0){
+        segment.buf = NULL;
+        segment.len = 0;
+        pthread_mutex_unlock(&(buf->lock));
+        return segment;
+    }
+    int partition = 0;
+    segment.buf = malloc(size);
+    segment.len = size;
+    if(buf->start+size > MAX_RW_BUFFER_SIZE){
+        partition = MAX_RW_BUFFER_SIZE-buf->start;
+    }
+    if(partition > 0){
+        memcpy(segment.buf,buf->buf+buf->start,partition);
+        memcpy(segment.buf+partition,buf->buf,size-partition);
+    }
+    else{
+        memcpy(segment.buf,buf->buf+buf->start,size);
+    }
+
+    buf->start = (buf->start+size)%MAX_RW_BUFFER_SIZE;
+    if(buf->size == MAX_RW_BUFFER_SIZE)
+        pthread_cond_signal(&(buf->full));
+    buf->size -= size;
+    if(buf->size == 0){     //the buf is empty, refresh all buf
+        buf->start = 0;
+        buf->end = 0;
+    }
+    pthread_mutex_unlock(&(buf->lock));
+    return segment;
 }

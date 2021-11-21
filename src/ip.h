@@ -103,3 +103,5 @@ void broadcast(packet_t packet);
 * @brief check if ip address in device list(available)
 */
 int check_ipv4_available(uint32_t ip_addr);
+
+uint32_t find_available_ip();
