@@ -73,6 +73,8 @@ int sendTCPPacket(int sockfd,const void *buf,int len,
 
 int parseTCPPacket(int sockfd,packet_t packet,ip_hdr_t ipHdr,tcp_hdr_t tcpHdr){
     sockfd = sockfd-SOCKFD_OFFSET;
+    if(!sockets[sockfd])
+        return -1;
     int state = sockets[sockfd]->state;
     uint32_t seq = ntohl(tcpHdr.seq_num);
     uint32_t ack = ntohl(tcpHdr.ack_num);
@@ -83,9 +85,9 @@ int parseTCPPacket(int sockfd,packet_t packet,ip_hdr_t ipHdr,tcp_hdr_t tcpHdr){
             uint16_t flag = 0;
             flag = set_ACK(flag);
             flag = set_SYN(flag);
-            sendTCPPacket(sockfd,NULL,0,sockets[sockfd]->isn,seq+1,flag);
+            sockets[sockfd]->ack_num += 1;
+            sendTCPPacket(sockfd,NULL,0,sockets[sockfd]->seq_num,sockets[sockfd]->ack_num,flag);
             sockets[sockfd]->state = SYN_RCVD;      //the order may need to change in multi-thread
-
         }
     }
     else if(is_SYN(tcpHdr.flag)&&is_ACK(tcpHdr.flag)){
@@ -94,13 +96,16 @@ int parseTCPPacket(int sockfd,packet_t packet,ip_hdr_t ipHdr,tcp_hdr_t tcpHdr){
             sockets[sockfd]->tcpInfo.dstport = tcpHdr.src_port;
             uint16_t flag = 0;
             flag = set_ACK(flag);
-            sendTCPPacket(sockfd,NULL,0,ack,seq+1,flag);
+            sockets[sockfd]->seq_num = ack;
+            sockets[sockfd]->ack_num += 1;
+            sendTCPPacket(sockfd,NULL,0,sockets[sockfd]->seq_num,sockets[sockfd]->ack_num,flag);
             sockets[sockfd]->state = ESTABLISHED;
         }
     }
     else if(is_FIN(tcpHdr.flag)){
         if(state == ESTABLISHED){
             uint16_t flag = set_ACK(0);
+            sockets[sockfd]->ack_num += 1;
             sendTCPPacket(sockfd,NULL,0,ack,seq+1,flag);
             flag = set_FIN(0);
             sendTCPPacket(sockfd,NULL,0,ack,seq+1,flag);
@@ -108,11 +113,13 @@ int parseTCPPacket(int sockfd,packet_t packet,ip_hdr_t ipHdr,tcp_hdr_t tcpHdr){
         }
         else if(state == FIN_WAIT_2){
             uint16_t flag = set_ACK(0);
+            sockets[sockfd]->ack_num += 1;
             sendTCPPacket(sockfd,NULL,0,ack,seq+1,flag);
             sockets[sockfd]->state = TIME_WAIT;
         }
         else if(state == FIN_WAIT_1){
             uint16_t flag = set_ACK(0);
+            sockets[sockfd]->ack_num += 1;
             sendTCPPacket(sockfd,NULL,0,ack,seq+1,flag);
             sockets[sockfd]->state = CLOSING;
         }
@@ -138,11 +145,8 @@ int parseTCPPacket(int sockfd,packet_t packet,ip_hdr_t ipHdr,tcp_hdr_t tcpHdr){
             }
             if(cLen < 0)
                 return -1;
-            segment_t content = read_rw_buf_nowait_new(&(sockets[sockfd]->send_buf));
-            if(content.len > 0){
-                sendTCPPacket(sockfd,content.buf,content.len,ack,seq+cLen,0);
-            }
-            free(content.buf);
+            if(ack > sockets[sockfd]->seq_num)
+                sockets[sockfd]->seq_num = ack;
         }
     }
     else{   //a data packet. copy
@@ -150,10 +154,13 @@ int parseTCPPacket(int sockfd,packet_t packet,ip_hdr_t ipHdr,tcp_hdr_t tcpHdr){
         int cLen = packet.len-hdrLen-sizeof(checksum_t);
         if(cLen > 0){
             write_rw_buf(&(sockets[sockfd]->receive_buf),packet.packet+hdrLen,cLen);
+            uint16_t flag = set_ACK(0);
+            if(sockets[sockfd]->ack_num < seq+cLen){
+                sockets[sockfd]->ack_num = seq+cLen;
+            }
+            sendTCPPacket(sockfd,NULL,0,ack,sockets[sockfd]->ack_num,flag);
         }
         if(cLen < 0)
             return -1;
-        uint16_t flag = set_ACK(0);
-        sendTCPPacket(sockfd,NULL,0,ack,seq+cLen,flag);
     }
 }

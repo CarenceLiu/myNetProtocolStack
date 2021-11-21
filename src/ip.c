@@ -511,3 +511,14 @@ int check_ipv4_available(uint32_t ip_addr){
     }
     return 0;
 }
+
+uint32_t find_available_ip(){
+    uint32_t ip = 0;
+    for(int i = 0; i < MAX_DEVICE_NUM; i += 1){
+        if(currDevices[i]){
+            ip = currDevices[i]->ip;
+            break;
+        }
+    }
+    return ip;
+}

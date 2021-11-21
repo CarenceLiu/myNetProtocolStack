@@ -153,6 +153,12 @@ typedef struct routerInfo routerInfo_t;
 * transport layer
 */
 
+#define SYN_WAIT_TIME 5
+#define ACC_SYN_WAIT 30
+#define ACC_ACK_WAIT 25
+#define FIN_ACK_WAIT 1
+#define RETRANS_WAIT_TIME 1
+
 struct socketPacket{
     u_char * packet;        //for free()
     u_char * segment;
@@ -197,9 +203,9 @@ typedef struct tcp_hdr tcp_hdr_t;
 #define FIN_WAIT_2 9
 #define TIME_WAIT 10
 
-#define CLIENT 1
-#define SERVER 2
-#define UNDECIDED 0
+// #define CLIENT 1
+// #define SERVER 2
+// #define UNDECIDED 0
 
 struct connectInfo{
     uint32_t srcaddr;
@@ -216,7 +222,8 @@ struct rw_buffer{       //ring buffer for read/write
     int end;
     int size;
     pthread_mutex_t lock;
-    pthread_cond_t cond;
+    pthread_cond_t empty;
+    pthread_cond_t full;
 };
 
 typedef struct rw_buffer rw_buffer_t;
@@ -224,7 +231,6 @@ typedef struct rw_buffer rw_buffer_t;
 struct socketInfo
 {
     int sockfd;
-    uint32_t isn;
 
     rw_buffer_t send_buf;
 
@@ -238,11 +244,13 @@ struct socketInfo
     int type;
     int protocol;
 
-    struct sockaddr *address;
-    socklen_t address_len;
-
     //TCP
+    int bind_flag;
+    int rw_flag;        //if it is a listen socket
+    uint32_t ack_num;
+    uint32_t seq_num;
     connectInfo_t tcpInfo;
+    pthread_t send_thread;
 };
 
 typedef struct socketInfo socketInfo_t;

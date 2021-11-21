@@ -19,7 +19,7 @@ hostInfo_t host;
 extern routeTable_t routingTable_exact;
 extern routeTable_t routingTable_lpm;
 extern device_t *currDevices[];
-extern socketInfo_t *sockets[MAX_CONNECT_NUM];
+extern socketInfo_t *sockets[];
 
 void * pcapReceive(void * t){
     int device_id = (uint64_t)t;
@@ -80,25 +80,22 @@ void parsePacket(){
             printf("parse DVPacket\n");
         // showIPPacket(packet);
         refreshRoutingTable(packet);
-        free(packet.packet);
     }
     else if(ipHdr.ip_p == 0x6){     //tcp segment
         tcp_hdr_t tcpHdr;
         memcpy(&tcpHdr,packet.packet+sizeof(eth_hdr_t)+sizeof(ip_hdr_t),sizeof(tcp_hdr_t));
         for(int i = 0; i < MAX_CONNECT_NUM; i += 1){
             if(sockets[i]){
-                if(sockets[i]->tcpInfo.srcaddr == ipHdr.ip_dst&&sockets[i]->tcpInfo.srcport == tcpHdr.dst_port){
+                if(sockets[i]->tcpInfo.srcaddr == ipHdr.ip_dst&&sockets[i]->tcpInfo.srcport == tcpHdr.dst_port
+                    &&sockets[i]->rw_flag){
                     // sockPush(&(sockets[i]->segmentBuff),spacket);
                     parseTCPPacket(sockets[i]->sockfd,packet,ipHdr,tcpHdr);
-                    free(packet.packet);
                     break;
                 }
             }
         }
     }
-    else{
-        free(packet.packet);
-    }
+    free(packet.packet);
 
 }
 
