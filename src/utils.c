@@ -1,7 +1,7 @@
 /* *
 * @file utils.c
 * @author: Wenrui Liu
-* @lastEdit: 2021-11-18
+* @lastEdit: 2021-11-21
 * @ some data structure implement.
 */
 #include "defs.h"
@@ -112,7 +112,7 @@ sockPacket_t sockPop(sockBuffer_t * buf){
     if(TEST_MODE == 1|| TEST_MODE >=8){
         printf("[utils.c] pop lock buffer mutex\n");
     }
-    while(empty(buf)){
+    while(sockEmpty(buf)){
         pthread_cond_wait(&(buf->empty_cond),&(buf->mutex));
         if(TEST_MODE == 1|| TEST_MODE >=8){
             printf("[utils.c] pop buffer empty, wait\n");
@@ -138,7 +138,7 @@ void sockPush(sockBuffer_t * buf,sockPacket_t packet){
     if(TEST_MODE == 1|| TEST_MODE >=8){
         printf("[utils.c] push buffer lock mutex\n");
     }
-    while(full(buf)){
+    while(sockFull(buf)){
         pthread_cond_wait(&(buf->full_cond),&(buf->mutex));
         if(TEST_MODE == 1|| TEST_MODE >=8){
             printf("[utils.c] push buffer full, wait\n");

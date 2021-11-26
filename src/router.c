@@ -20,7 +20,7 @@ extern device_t *currDevices[];
 
 void* pcapReceive(void * t){
     int device_id = (uint64_t)t;
-    if(TEST_MODE >= 5){
+    if(TEST_MODE >= 8){
         printf("receiving thread of device %d has created\n",device_id);
     }
     pcap_t *handler = currDevices[device_id]->pcapHandler;
@@ -31,7 +31,7 @@ void* pcapReceive(void * t){
         struct pcap_pkthdr header;
         packet = pcap_next(handler,&header);
         if(packet){
-            if(TEST_MODE >= 1){
+            if(TEST_MODE >= 8){
                 printf("[router.c] pcapReceive malloc\n");
             }
             u_char * content = malloc(header.len);
@@ -77,6 +77,13 @@ void parsePacket(){
         broadcast(packet);
     }
     else{
+        if(TEST_MODE == 5||TEST_MODE >= 8){
+            printf("receive a TCP packet and forward\n");
+            for(int i = 0; i < packet.len; i += 1){
+                printf("%02x ",packet.packet[i]);
+            }
+            printf("\n");
+        }
         forward(packet);
     }
     free(packet.packet);

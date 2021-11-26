@@ -1,7 +1,7 @@
 /* *
 * @file device.h
 * @author: Wenrui Liu
-* @lastEdit: 2021-11-17
+* @lastEdit: 2021-11-21
 * @ define and typedef library.
 */
 #include<string.h>
@@ -14,6 +14,7 @@
 #include<sys/socket.h>
 #include<netdb.h>
 
+#define TEST_MODE 5
 
 #define MAX_DEVICE_NUM 10
 #define MAX_DEVICE_NAME_LENGTH 100
@@ -26,12 +27,12 @@
 #define DV_PROTOCOL 0xff
 #define ETH_TYPE 0X0800
 #define PACKET_TTL_DEFAULT 16
-#define RTE_TTL_DEFAULT 25
+#define RTE_TTL_DEFAULT 64
 #define SOCKFD_OFFSET 128
 #define PORT_OFFSET 10000
 #define true 1
 #define false 0
-#define TEST_MODE 0
+
 
 typedef int deviceID_t;
 typedef uint32_t ipv4_t;
@@ -154,7 +155,7 @@ typedef struct routerInfo routerInfo_t;
 */
 
 #define SYN_WAIT_TIME 5
-#define ACC_SYN_WAIT 30
+#define ACC_SYN_WAIT 60
 #define ACC_ACK_WAIT 25
 #define FIN_ACK_WAIT 1
 #define RETRANS_WAIT_TIME 1
