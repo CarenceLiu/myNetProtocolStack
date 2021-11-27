@@ -46,8 +46,8 @@ segment_t buildTCPPacket(int sockfd,const void *buf,int len,
 
     hdr.src_port = sockets[sockfd]->tcpInfo.srcport;
     hdr.dst_port = sockets[sockfd]->tcpInfo.dstport;
-    hdr.ack_num = htonl(seq_num);
-    hdr.seq_num = htonl(ack_num);
+    hdr.ack_num = htonl(ack_num);
+    hdr.seq_num = htonl(seq_num);
     hdr.flag = flag;
 
     memcpy(segment.buf,&hdr,sizeof(tcp_hdr_t));
@@ -67,16 +67,23 @@ int sendTCPPacket(int sockfd,const void *buf,int len,
             printf("sockfd doesn't exist\n");
         return -1;
     }
-    if(TEST_MODE == 5|| TEST_MODE >=8)
-        printf("send TCP packet\n");
+
     segment_t segment = buildTCPPacket(oldfd,buf,len,seq_num,ack_num,flag);
-    // if(TEST_MODE == 5|| TEST_MODE >=8)
-    //     printf("end build TCP packet\n");
+    if(TEST_MODE == 5|| TEST_MODE >=8){
+        printf("\nsend TCP packet\n");
+        for(int i = 0; i < segment.len; i += 1){
+            printf("%02x ",segment.buf[i]);
+        }
+        printf("\n");
+        printf("seq_num: %d ack_num: %d syn: %d ack: %d fin: %d\n",seq_num,ack_num,is_SYN(flag),is_ACK(flag),is_FIN(flag));
+    }
     struct in_addr src,dst;
     src.s_addr = sockets[sockfd]->tcpInfo.srcaddr;
     dst.s_addr = sockets[sockfd]->tcpInfo.dstaddr;
     sendIPPacket(src,dst,0x6,segment.buf,segment.len);
     free(segment.buf);
+    // if(TEST_MODE == 5|| TEST_MODE >=8)
+    //     printf("end send TCP packet\n");
     return 0;
 }
 
@@ -91,11 +98,11 @@ int parseTCPPacket(int sockfd,packet_t packet,ip_hdr_t ipHdr,tcp_hdr_t tcpHdr){
 
 
     if(TEST_MODE == 5||TEST_MODE >= 8){
-        printf("receive a TCPpacket\n");
-        for(int i = 0; i < packet.len; i += 1){
-            printf("%02x ",packet.packet[i]);
-        }
-        printf("\n");
+        printf("\nreceive a TCP packet\n");
+        // for(int i = 0; i < packet.len; i += 1){
+        //     printf("%02x ",packet.packet[i]);
+        // }
+        // printf("\n");
         printf("the flag bits: syn %d, ack %d, fin %d\n",is_SYN(tcpHdr.flag),is_ACK(tcpHdr.flag),is_FIN(tcpHdr.flag));
         printf("the seq_num: %d, the ack_num: %d\n",seq,ack);
     }
@@ -108,6 +115,7 @@ int parseTCPPacket(int sockfd,packet_t packet,ip_hdr_t ipHdr,tcp_hdr_t tcpHdr){
             uint16_t flag = 0;
             flag = set_ACK(flag);
             flag = set_SYN(flag);
+            sockets[sockfd]->ack_num = seq;
             sockets[sockfd]->ack_num += 1;
             sendTCPPacket(oldfd,NULL,0,sockets[sockfd]->seq_num,sockets[sockfd]->ack_num,flag);
             if(TEST_MODE == 5||TEST_MODE >=8){
@@ -122,8 +130,9 @@ int parseTCPPacket(int sockfd,packet_t packet,ip_hdr_t ipHdr,tcp_hdr_t tcpHdr){
             sockets[sockfd]->tcpInfo.dstport = tcpHdr.src_port;
             uint16_t flag = 0;
             flag = set_ACK(flag);
-            sockets[sockfd]->seq_num = ack;
+            sockets[sockfd]->ack_num = seq;
             sockets[sockfd]->ack_num += 1;
+            sockets[sockfd]->seq_num += 1;
             sendTCPPacket(oldfd,NULL,0,sockets[sockfd]->seq_num,sockets[sockfd]->ack_num,flag);
             if(TEST_MODE == 5||TEST_MODE >=8){
                 printf("the socket state change to ESTABLISHED\n");
@@ -137,7 +146,7 @@ int parseTCPPacket(int sockfd,packet_t packet,ip_hdr_t ipHdr,tcp_hdr_t tcpHdr){
             sockets[sockfd]->ack_num += 1;
             sendTCPPacket(oldfd,NULL,0,ack,seq+1,flag);
             flag = set_FIN(0);
-            sendTCPPacket(sockfd,NULL,0,ack,seq+1,flag);
+            sendTCPPacket(oldfd,NULL,0,ack,seq+1,flag);
             if(TEST_MODE == 5||TEST_MODE >=8){
                 printf("the socket state change to LAST_ACK\n");
             }
@@ -194,8 +203,9 @@ int parseTCPPacket(int sockfd,packet_t packet,ip_hdr_t ipHdr,tcp_hdr_t tcpHdr){
             }
             int hdrLen = sizeof(eth_hdr_t)+sizeof(ip_hdr_t)+sizeof(tcp_hdr_t);
             int cLen = packet.len-hdrLen-sizeof(checksum_t);
-            if(cLen > 0){
+            if(cLen > 0&&sockets[sockfd]->ack_num == seq){
                 write_rw_buf(&(sockets[sockfd]->receive_buf),packet.packet+hdrLen,cLen);
+                sockets[sockfd]->ack_num += cLen;
             }
             if(cLen < 0)
                 return -1;
@@ -209,13 +219,11 @@ int parseTCPPacket(int sockfd,packet_t packet,ip_hdr_t ipHdr,tcp_hdr_t tcpHdr){
             }
         int hdrLen = sizeof(eth_hdr_t)+sizeof(ip_hdr_t)+sizeof(tcp_hdr_t);
         int cLen = packet.len-hdrLen-sizeof(checksum_t);
-        if(cLen > 0){
-            printf("content: %s\n",packet.packet+hdrLen);
+        if(cLen > 0&&seq == sockets[sockfd]->ack_num){
+            printf("content: %s\nand send ACK back\n",packet.packet+hdrLen);
             write_rw_buf(&(sockets[sockfd]->receive_buf),packet.packet+hdrLen,cLen);
             uint16_t flag = set_ACK(0);
-            if(sockets[sockfd]->ack_num < seq+cLen){
-                sockets[sockfd]->ack_num = seq+cLen;
-            }
+            sockets[sockfd]->ack_num = seq+cLen;
             sendTCPPacket(oldfd,NULL,0,ack,sockets[sockfd]->ack_num,flag);
         }
         if(cLen < 0)

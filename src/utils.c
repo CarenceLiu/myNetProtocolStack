@@ -268,9 +268,15 @@ void write_rw_buf(rw_buffer_t * buf, u_char * buf_src,int len){
 
 segment_t read_rw_buf_block_new(rw_buffer_t * buf){
     pthread_mutex_lock(&(buf->lock));
+    // if(TEST_MODE == 5||TEST_MODE >= 8){
+    //     printf("read_rw_buf_lock_new begin block");
+    // }
     while(buf->size == 0){
         pthread_cond_wait(&(buf->empty),&(buf->lock));
     }
+    // if(TEST_MODE == 5||TEST_MODE >= 8){
+    //     printf("read_rw_buf_lock_new end block");
+    // }
     int size = buf->size > MAX_CONTENT_LENGTH? MAX_CONTENT_LENGTH:buf->size;
     segment_t segment;
     if(size == 0){
