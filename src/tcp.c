@@ -44,11 +44,13 @@ segment_t buildTCPPacket(int sockfd,const void *buf,int len,
 
     memset(segment.buf,0,segment.len);
 
-    hdr.src_port = sockets[sockfd]->tcpInfo.srcport;
-    hdr.dst_port = sockets[sockfd]->tcpInfo.dstport;
+    hdr.src_port = htons(sockets[sockfd]->tcpInfo.srcport);
+    hdr.dst_port = htons(sockets[sockfd]->tcpInfo.dstport);
     hdr.ack_num = htonl(ack_num);
     hdr.seq_num = htonl(seq_num);
     hdr.flag = flag;
+    hdr.window = 0;
+    hdr.blank = 0;
 
     memcpy(segment.buf,&hdr,sizeof(tcp_hdr_t));
 
@@ -95,14 +97,16 @@ int parseTCPPacket(int sockfd,packet_t packet,ip_hdr_t ipHdr,tcp_hdr_t tcpHdr){
     int state = sockets[sockfd]->state;
     uint32_t seq = ntohl(tcpHdr.seq_num);
     uint32_t ack = ntohl(tcpHdr.ack_num);
+    uint16_t dst_port = ntohs(tcpHdr.dst_port);
+    uint16_t src_port = ntohs(tcpHdr.src_port);
 
 
     if(TEST_MODE == 5||TEST_MODE >= 8){
         printf("\nreceive a TCP packet\n");
-        // for(int i = 0; i < packet.len; i += 1){
-        //     printf("%02x ",packet.packet[i]);
-        // }
-        // printf("\n");
+        for(int i = 0; i < packet.len; i += 1){
+            printf("%02x ",packet.packet[i]);
+        }
+        printf("\n");
         printf("the flag bits: syn %d, ack %d, fin %d\n",is_SYN(tcpHdr.flag),is_ACK(tcpHdr.flag),is_FIN(tcpHdr.flag));
         printf("the seq_num: %d, the ack_num: %d\n",seq,ack);
     }
@@ -111,7 +115,7 @@ int parseTCPPacket(int sockfd,packet_t packet,ip_hdr_t ipHdr,tcp_hdr_t tcpHdr){
     if(is_SYN(tcpHdr.flag)&&!is_ACK(tcpHdr.flag)){
         if(state == LISTEN||state == SYN_SENT){        //single connect or synchronous
             sockets[sockfd]->tcpInfo.dstaddr = ipHdr.ip_src;
-            sockets[sockfd]->tcpInfo.dstport = tcpHdr.src_port;
+            sockets[sockfd]->tcpInfo.dstport = src_port;
             uint16_t flag = 0;
             flag = set_ACK(flag);
             flag = set_SYN(flag);
@@ -127,7 +131,7 @@ int parseTCPPacket(int sockfd,packet_t packet,ip_hdr_t ipHdr,tcp_hdr_t tcpHdr){
     else if(is_SYN(tcpHdr.flag)&&is_ACK(tcpHdr.flag)){
         if(state == SYN_SENT){
             sockets[sockfd]->tcpInfo.dstaddr = ipHdr.ip_src;
-            sockets[sockfd]->tcpInfo.dstport = tcpHdr.src_port;
+            sockets[sockfd]->tcpInfo.dstport = src_port;
             uint16_t flag = 0;
             flag = set_ACK(flag);
             sockets[sockfd]->ack_num = seq;
