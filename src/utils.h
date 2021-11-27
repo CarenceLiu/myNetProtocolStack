@@ -1,7 +1,7 @@
 /* *
 * @file utils.h
 * @author: Wenrui Liu
-* @lastEdit: 2021-11-18
+* @lastEdit: 2021-11-21
 * @ some data structure library.
 */
 
@@ -42,4 +42,5 @@ int sockFull(sockBuffer_t * buffer);
 void initrwBuffer(rw_buffer_t * buf);
 int read_rw_buf_nowait_to(rw_buffer_t * buf, u_char * buf_aim,int len);
 segment_t read_rw_buf_nowait_new(rw_buffer_t * buf);
+segment_t read_rw_buf_block_new(rw_buffer_t * buf);
 void write_rw_buf(rw_buffer_t * buf, u_char * buf_src,int len);

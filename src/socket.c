@@ -1,7 +1,7 @@
 /*
 * @file socket.c
 * @author: Wenrui Liu
-* @lastEdit: 2021-11-21
+* @lastEdit: 2021-11-26
 * @brief socket implement
 */
 
@@ -13,24 +13,38 @@
 
 extern socketInfo_t *sockets[];
 
-void read_rw_thread(void * t){
+void * read_rw_thread(void * t){
     int sockfd = (uint64_t)t;
     int index = sockfd-SOCKFD_OFFSET;
-    while(sockets[index]->state != CLOSED){
+
+    // if(TEST_MODE == 5|| TEST_MODE >=8)
+    //     printf("begin rw_thread\n");
+    while(sockets[index]&&sockets[index]->state != CLOSED){
+        // if(TEST_MODE == 5|| TEST_MODE >=8)
+        //     printf("begin send a content\n");
         clock_t start;
         segment_t content = read_rw_buf_block_new(&(sockets[index]->send_buf));
+        if(sockets[index]&&sockets[index]->state == CLOSED){
+            free(sockets[index]);
+            sockets[index] = NULL;
+            return NULL;
+        }
         uint32_t seq_num = sockets[index]->seq_num;
         int times = 0;
         while(times < 5){
             start = clock();
+            if(times >= 1)
+                printf("Retrans\n");
             sendTCPPacket(sockfd,content.buf,content.len,seq_num,sockets[index]->ack_num,0);
-            while((float)(clock()-start)/CLOCKS_PER_SEC < RETRANS_WAIT_TIME&&seq_num == sockets[index]->seq_num);
-            if(seq_num != sockets[index]->seq_num){
+            while((float)(clock()-start)/CLOCKS_PER_SEC < RETRANS_WAIT_TIME&&sockets[index]&&seq_num == sockets[index]->seq_num);
+            if(sockets[index]&&seq_num != sockets[index]->seq_num){
                 break;
             }
             times += 1;
         }
         free(content.buf);
+        // if(TEST_MODE == 5|| TEST_MODE >=8)
+        //     printf("end send a content\n");
     }
 }
 
@@ -112,12 +126,14 @@ int __wrap_connect(int socket, const struct sockaddr* address, socklen_t address
     while(syn_send_times < 5){      
         uint16_t flag = set_SYN(0);
         sendTCPPacket(socket,NULL,0,sockets[index]->seq_num,sockets[index]->ack_num,flag);
+        // if(TEST_MODE == 5|| TEST_MODE >=8)
+        //     printf("end send tcp\n");
         sockets[index]->state = SYN_SENT;
         //busy waiting
         while((float)(clock()-start)/CLOCKS_PER_SEC < SYN_WAIT_TIME&&sockets[index]->state != ESTABLISHED);
         
         if(sockets[index]->state == ESTABLISHED){
-            pthread_create(&(sockets[index]->send_thread),NULL,read_rw_thread,(void *)(sockets[index]->sockfd));
+            pthread_create(&(sockets[index]->send_thread),NULL,read_rw_thread,(void *)(uint64_t)(sockets[index]->sockfd));
             pthread_detach(sockets[index]->send_thread);
             return 0;
         }
@@ -155,8 +171,8 @@ int acc_sock_create(int socket){
     sockets[newIndex]->bind_flag = 1;
     sockets[newIndex]->tcpInfo.dstaddr = 0;
     sockets[newIndex]->tcpInfo.dstport = 0;
-    sockets[newIndex]->tcpInfo.srcaddr = sockets[oldIndex]->tcpInfo.srcport;
-    sockets[newIndex]->tcpInfo.srcport = newIndex+PORT_OFFSET;
+    sockets[newIndex]->tcpInfo.srcaddr = sockets[oldIndex]->tcpInfo.srcaddr;
+    sockets[newIndex]->tcpInfo.srcport = sockets[oldIndex]->tcpInfo.srcport;
     sockets[newIndex]->rw_flag = 1;
     return newIndex;
 }
@@ -167,26 +183,41 @@ int __wrap_accept(int socket, struct sockaddr* address,socklen_t *address_len){
         return -1;
     index = acc_sock_create(socket);
     struct sockaddr_in * addr_in = (struct sockaddr_in *) address;
-    uint32_t dst_ip = addr_in->sin_addr.s_addr;
-    uint16_t dst_port = addr_in->sin_port;
-    sockets[index]->tcpInfo.dstaddr = dst_ip;
-    sockets[index]->tcpInfo.dstport = dst_port;
     clock_t start = clock();
     //busy waiting
+    // if(TEST_MODE == 5||TEST_MODE >= 8){
+    //     printf("accept waiting syn\n");
+    // }
     while((float)(clock()-start)/CLOCKS_PER_SEC < ACC_SYN_WAIT&&sockets[index]->state == LISTEN);
     if(sockets[index]->state == LISTEN)     //wait out of time
         return -1;
     start = clock();
+    // if(TEST_MODE == 5||TEST_MODE >= 8){
+    //     printf("accept waiting ack\n");
+    // }
     while((float)(clock()-start)/CLOCKS_PER_SEC < ACC_ACK_WAIT&&sockets[index]->state != ESTABLISHED);
     if(sockets[index]->state == ESTABLISHED){
-        pthread_create(&(sockets[index]->send_thread),NULL,read_rw_thread,(void *)(sockets[index]->sockfd));
+        // if(TEST_MODE == 5||TEST_MODE >= 8){
+        //     printf("create read_rw_thread\n");
+        // }
+        pthread_create(&(sockets[index]->send_thread),NULL,read_rw_thread,(void *)(uint64_t)(sockets[index]->sockfd));
         pthread_detach(sockets[index]->send_thread);
+        *address_len = sizeof(struct sockaddr);
+        addr_in->sin_family = AF_INET;
+        addr_in->sin_port = sockets[index]->tcpInfo.dstport;
+        addr_in->sin_addr.s_addr = sockets[index]->tcpInfo.dstaddr;
+        // if(TEST_MODE == 5||TEST_MODE >= 8){
+        //     printf("end accept\n");
+        // }
         return index+SOCKFD_OFFSET;
     }
+    
     //if accept fail
-    sockets[index]->state = LISTEN;
-    sockets[index]->tcpInfo.dstaddr = 0;
-    sockets[index]->tcpInfo.dstport = 0;
+    // sockets[index]->state = LISTEN;
+    // sockets[index]->tcpInfo.dstaddr = 0;
+    // sockets[index]->tcpInfo.dstport = 0;
+    free(sockets[index]);
+    sockets[index] = NULL;
     return -1;
 }
 
@@ -197,11 +228,14 @@ ssize_t __wrap_read(int fildes,void *buf, size_t nbyte){
 
 ssize_t __wrap_write(int fildes, const void* buf, size_t nbyte){
     int index = fildes-SOCKFD_OFFSET;
-    write_rw_buf(&(sockets[index]->send_buf),buf,nbyte);
+    write_rw_buf(&(sockets[index]->send_buf),(u_char *)buf,nbyte);
     return nbyte;
 }
 
 int __wrap_close(int fildes){
+    // if(TEST_MODE == 5||TEST_MODE >= 8){
+    //     printf("begin close\n");
+    // }
     int index = fildes-SOCKFD_OFFSET;
     if(sockets[index]->state != ESTABLISHED&&sockets[index]->state != LAST_ACK&&sockets[index]->state != CLOSED)
         return -1;
@@ -209,11 +243,12 @@ int __wrap_close(int fildes){
         uint16_t flag = set_FIN(0);
         int fin_times = 0;
         clock_t start;
+        sockets[index]->state = FIN_WAIT_1;
         //retrans if miss
         while(fin_times < 3){
             sendTCPPacket(fildes,NULL,0,sockets[index]->seq_num,sockets[index]->ack_num,flag);
             start = clock();
-            while((float)(clock()-start)/CLOCKS_PER_SEC < FIN_ACK_WAIT||sockets[index]->state != TIME_WAIT);
+            while((float)(clock()-start)/CLOCKS_PER_SEC < FIN_ACK_WAIT&&sockets[index]->state != TIME_WAIT);
             if(sockets[index]->state == TIME_WAIT){
                 break;
             }
@@ -221,10 +256,7 @@ int __wrap_close(int fildes){
         }
     }
     else if(sockets[index]->state == CLOSED){
-        if(pthread_cancel(sockets[index]->send_thread) == 0){
-            free(sockets[index]);
-            sockets[index] = NULL;
-        }
+        pthread_cond_signal(&(sockets[index]->send_buf.empty));
     }
     return 0;
 }
@@ -247,7 +279,7 @@ int __wrap_getaddrinfo(const char* node, const char* service, const struct addri
                     current->ai_next = malloc(sizeof(struct addrinfo));
                     current = current->ai_next;
                 }
-                current->ai_addrlen = 6;
+                current->ai_addrlen = sizeof(struct sockaddr);
                 current->ai_family = sockets[i]->domain;
                 current->ai_protocol = sockets[i]->protocol;
                 current->ai_socktype = sockets[i]->type;

@@ -1,7 +1,7 @@
 /* *
 * @file utils.c
 * @author: Wenrui Liu
-* @lastEdit: 2021-11-18
+* @lastEdit: 2021-11-21
 * @ some data structure implement.
 */
 #include "defs.h"
@@ -112,7 +112,7 @@ sockPacket_t sockPop(sockBuffer_t * buf){
     if(TEST_MODE == 1|| TEST_MODE >=8){
         printf("[utils.c] pop lock buffer mutex\n");
     }
-    while(empty(buf)){
+    while(sockEmpty(buf)){
         pthread_cond_wait(&(buf->empty_cond),&(buf->mutex));
         if(TEST_MODE == 1|| TEST_MODE >=8){
             printf("[utils.c] pop buffer empty, wait\n");
@@ -138,7 +138,7 @@ void sockPush(sockBuffer_t * buf,sockPacket_t packet){
     if(TEST_MODE == 1|| TEST_MODE >=8){
         printf("[utils.c] push buffer lock mutex\n");
     }
-    while(full(buf)){
+    while(sockFull(buf)){
         pthread_cond_wait(&(buf->full_cond),&(buf->mutex));
         if(TEST_MODE == 1|| TEST_MODE >=8){
             printf("[utils.c] push buffer full, wait\n");
@@ -268,9 +268,15 @@ void write_rw_buf(rw_buffer_t * buf, u_char * buf_src,int len){
 
 segment_t read_rw_buf_block_new(rw_buffer_t * buf){
     pthread_mutex_lock(&(buf->lock));
+    // if(TEST_MODE == 5||TEST_MODE >= 8){
+    //     printf("read_rw_buf_lock_new begin block");
+    // }
     while(buf->size == 0){
         pthread_cond_wait(&(buf->empty),&(buf->lock));
     }
+    // if(TEST_MODE == 5||TEST_MODE >= 8){
+    //     printf("read_rw_buf_lock_new end block");
+    // }
     int size = buf->size > MAX_CONTENT_LENGTH? MAX_CONTENT_LENGTH:buf->size;
     segment_t segment;
     if(size == 0){

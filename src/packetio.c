@@ -45,10 +45,13 @@ frameInfo_t buildFrame(const void * buf, int len, int ethtype, const void * dest
 
 int sendFrame(const void * buf, int len, int ethtype, const void * destmac, int id){
     frameInfo_t ethFrame = buildFrame(buf,len,ethtype,destmac,id);
-    // for(int i = 0; i < ethFrame.frameLength; i+= 1){
-    //     printf("%02x ",ethFrame.frame[i]);
+    // if(TEST_MODE == 5||TEST_MODE >= 8){
+    //     printf("send a packet\n");
+    //     for(int i = 0; i < ethFrame.frameLength; i+= 1){
+    //         printf("%02x ",ethFrame.frame[i]);
+    //     }
+    //     printf("\n");
     // }
-    // printf("\n");
     int ret = pcap_sendpacket(currDevices[id]->pcapHandler,ethFrame.frame,ethFrame.frameLength);
     free(ethFrame.frame);
     //this step needs more investigation

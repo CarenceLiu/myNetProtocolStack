@@ -1,7 +1,7 @@
 /*
 * @file tcp.h
 * @author: Wenrui Liu
-* @lastEdit: 2021-11-16
+* @lastEdit: 2021-11-21
 * @brief TCP declaration
 */
 
@@ -31,3 +31,4 @@ int is_ACK(uint16_t flag);
 uint16_t set_SYN(uint16_t flag);
 uint16_t set_FIN(uint16_t flag);
 uint16_t set_ACK(uint16_t flag);
+

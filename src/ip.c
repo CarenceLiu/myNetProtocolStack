@@ -327,10 +327,12 @@ void * periodRefreshRT(){
         if(clock_p%5 == 0){
             sendDVPackets();
         }
+        // if(TEST_MODE == 5||TEST_MODE >= 8){
+        //     if(clock_p%10 == 0){
 
-        if(clock_p%10 == 0){
-            showRoutingTable();
-        }
+        //         showRoutingTable();
+        //     }
+        // }
     }
 }
 
@@ -367,9 +369,12 @@ void showRoutingTable(){
 int sendIPPacket(const struct in_addr src, const struct in_addr dest, int proto, const void * buf, int len){
     packetInfo_t ipPacket = buildPacket(src,dest,proto,buf,len,PACKET_TTL_DEFAULT);
     int ret = 0;
+    // if(TEST_MODE == 5||TEST_MODE >= 8){
+    //     printf("send an IP packet to: %d.%d.%d.%d\n",(dest.s_addr>>24),((dest.s_addr&0xff0000)>>16),((dest.s_addr&0xff00)>>8),dest.s_addr&0xff);
+    // }
 
     //default action: drop
-    if(dest.s_addr == 0xfffffff){
+    if(dest.s_addr == 0xffffffff){
         //broadcast
         uint8_t mac[6] = {0xff,0xff,0xff,0xff,0xff,0xff};
         for(int i = 0 ; i < MAX_DEVICE_NUM; i += 1){
@@ -380,10 +385,17 @@ int sendIPPacket(const struct in_addr src, const struct in_addr dest, int proto,
     }
     else{
         rte_t nextHop = lookForNextHop(dest.s_addr);
+        // if(TEST_MODE == 5||TEST_MODE >= 8){
+        //     printf("find next_hop: %d.%d.%d.%d\n",(nextHop.dst>>24),((nextHop.dst&0xff0000)>>16),((nextHop.dst&0xff00)>>8),nextHop.dst&0xff);
+        //     printf("next mac: %02x:%02x:%02x:%02x:%02x:%02x\n",nextHop.next_hop_mac[0],nextHop.next_hop_mac[1],nextHop.next_hop_mac[2]
+        //     ,nextHop.next_hop_mac[3],nextHop.next_hop_mac[4],nextHop.next_hop_mac[5]);
+        // }
         if(nextHop.ttl == -1){
             return -1;
         }
         else{
+            // if(TEST_MODE == 5|| TEST_MODE >=8)
+            //     printf("find device and send packet\n");
             sendFrame(ipPacket.packet,ipPacket.packetLength,ETH_TYPE,nextHop.next_hop_mac,nextHop.src_device_id);
         }
     }
@@ -393,6 +405,7 @@ int sendIPPacket(const struct in_addr src, const struct in_addr dest, int proto,
 rte_t lookForNextHop(ipv4_t dst){
     rte_t ret;
     ret.ttl = -1;
+    memset(&ret,0,sizeof(rte_t));
 
     //exact match
     pthread_rwlock_rdlock(&(routingTable_exact.rwlock));
@@ -401,6 +414,9 @@ rte_t lookForNextHop(ipv4_t dst){
     }
     for(int i = 0; i < MAX_ROUTE_TABLE_LENGTH; i += 1){
         if(routingTable_exact.RTEs[i]&&routingTable_exact.RTEs[i]->ttl > 0){
+            // if(TEST_MODE == 5||TEST_MODE >= 8){
+            //     printf("rte: %d.%d.%d.%d\n",(routingTable_exact.RTEs[i]->dst>>24),((routingTable_exact.RTEs[i]->dst&0xff0000)>>16),((routingTable_exact.RTEs[i]->dst&0xff00)>>8),routingTable_exact.RTEs[i]->dst&0xff);
+            // }
             if(dst == routingTable_exact.RTEs[i]->dst){
                 memcpy(&ret,routingTable_exact.RTEs[i],sizeof(rte_t));
                 break;
@@ -413,7 +429,7 @@ rte_t lookForNextHop(ipv4_t dst){
     }
 
     // if(ret.ttl != -1)
-        return ret;
+    return ret;
 
     //exact match failure, lpm
     pthread_rwlock_rdlock(&(routingTable_lpm.rwlock));
@@ -481,7 +497,10 @@ void forward(packet_t packet){
         memcpy(ethHdr.src,currDevices[device_id]->mac,6);
         memcpy(packet.packet,&ethHdr,sizeof(eth_hdr_t));
         memcpy(packet.packet+sizeof(eth_hdr_t),&ipHdr,sizeof(ip_hdr_t));
-        pcap_sendpacket(currDevices[device_id]->pcapHandler,packet.packet,packet.len);
+        int ret = pcap_sendpacket(currDevices[device_id]->pcapHandler,packet.packet,packet.len);
+        // if(TEST_MODE == 5||TEST_MODE >= 8){
+        //     printf("find next hop send %d\n",ret);
+        // }
     }
 
 }

@@ -90,3 +90,52 @@ After finishing network layer, `host.c` and `router.c` are programmed for host a
 
 In each router and host, a thread is used to handle the packets, each veth device has a receiving thread to receive packets. Each host has an additional thread for receiving and sending packets.
 
+#### Transport layer
+
+In this part, I implement a simple TCP reliable connect in files `tcp.c tcp.h socket.c socket.h`. In more detailed, `tcp.*` contained the state changing and send a TCP segment reliably. `socket.*` is used as API for the higher layer.
+
+There is a brief introduction. 
+
+ For each socket, a `struct socketInfo` is maintained to store the vital information.
+
+```c
+struct socketInfo
+{
+    int sockfd;		//fd
+    rw_buffer_t send_buf;		//content buffer
+    rw_buffer_t receive_buf;
+    uint16_t window_size;
+    sockBuffer_t segmentBuff;	//segmentBuff
+    int state;		//socket state
+    int domain;
+    int type;
+    int protocol;
+    int bind_flag;
+    int rw_flag;        //if it is a listen socket
+    uint32_t ack_num;
+    uint32_t seq_num;
+    connectInfo_t tcpInfo;
+    pthread_t send_thread;
+};
+```
+
+The main idea of socket functions is to manipulate the state in `socketInfo`  and to send segments for communication. The details are as follows.
+
+`socket()`: create a new `struct socketInfo` and return the sockfd
+
+`bind()`: check the ipv4 address and TCP port and bind them with the socket
+
+`listen()`: change the socket state from CLOSED to LISTEN
+
+`connect()`: allocate an ipv4 address and TCP port, then try to perform three handshakes with the target socket
+
+`accept`: create a new socket for read/write and waiting for connecting(SYN/ACK). If success, the state will be changed to ESTABLISHED
+
+`close`: close the connection with FIN/ACKs. Deallocate the `struct socketInfo`
+
+The `tcp.*` files implements sending TCP packets and parsing TCP packets.
+
+`sendTCPPacket`: add a TCP header before the content and call `sendIPPacket` 
+
+`parseTCPPacket`: analyze a TCP packet. Changing the socket state or buffering the content.
+
