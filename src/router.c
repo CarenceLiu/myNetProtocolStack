@@ -31,13 +31,14 @@ void* pcapReceive(void * t){
         struct pcap_pkthdr header;
         packet = pcap_next(handler,&header);
         if(packet){
-            if(TEST_MODE >= 8){
+            if(TEST_MODE == 4||TEST_MODE >= 8){
                 printf("[router.c] pcapReceive malloc\n");
             }
             u_char * content = malloc(header.len);
             memcpy(content,packet,header.len);
             tmp.len = header.len;
             tmp.packet = content;
+            tmp.device_id = device_id;
             push(&(router.packetBuffer),tmp);
         }
     }
@@ -79,10 +80,10 @@ void parsePacket(){
     else{
         if(TEST_MODE == 5||TEST_MODE >= 8){
             printf("receive a TCP packet and forward\n");
-            for(int i = 0; i < packet.len; i += 1){
-                printf("%02x ",packet.packet[i]);
-            }
-            printf("\n");
+            // for(int i = 0; i < packet.len; i += 1){
+            //     printf("%02x ",packet.packet[i]);
+            // }
+            // printf("\n");
         }
         forward(packet);
     }
@@ -92,6 +93,11 @@ void parsePacket(){
 int main(){
 
     addAllDevices();
+    for(int i = 0; i < MAX_DEVICE_NUM; i += 1){
+        if(currDevices[i]){
+            printf("ip: %d.%d.%d.%d\n",(currDevices[i]->ip&0xff),((currDevices[i]->ip>>8)&0xff),((currDevices[i]->ip>>16)&0xff),((currDevices[i]->ip>>24)&0xff));
+        }
+    }
     initBuffer(&(router.packetBuffer));
     initRoutingTable();
     

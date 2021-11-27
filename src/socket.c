@@ -33,7 +33,7 @@ void * read_rw_thread(void * t){
         int times = 0;
         while(times < 5){
             start = clock();
-            if(times >= 1)
+            if(times >= 1&&TEST_MODE ==5||TEST_MODE >= 8)
                 printf("Retrans\n");
             sendTCPPacket(sockfd,content.buf,content.len,seq_num,sockets[index]->ack_num,0);
             while((float)(clock()-start)/CLOCKS_PER_SEC < RETRANS_WAIT_TIME&&sockets[index]&&seq_num == sockets[index]->seq_num);

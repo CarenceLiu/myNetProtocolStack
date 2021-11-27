@@ -327,12 +327,12 @@ void * periodRefreshRT(){
         if(clock_p%5 == 0){
             sendDVPackets();
         }
-        // if(TEST_MODE == 5||TEST_MODE >= 8){
-        //     if(clock_p%10 == 0){
+        if(TEST_MODE == 5||TEST_MODE >= 8){
+            if(clock_p%10 == 0){
 
-        //         showRoutingTable();
-        //     }
-        // }
+                showRoutingTable();
+            }
+        }
     }
 }
 
@@ -341,7 +341,7 @@ void showRoutingTable(){
     if(TEST_MODE == 4|| TEST_MODE >=8){
         printf("[ip.c] showRoutingTable get routing table rdlock\n");
     }
-    printf("|dst ip | mask | next hop mac | distance | ttl |\n");
+    printf("|dst ip | mask | next hop mac | distance | ttl | device_id\n");
     for(int i = 0; i < MAX_ROUTE_TABLE_LENGTH; i += 1){
         if(routingTable_exact.RTEs[i]){
             int ip = routingTable_exact.RTEs[i]->dst;
@@ -351,7 +351,7 @@ void showRoutingTable(){
             printf("%02X:%02X:%02X:%02X:%02X:%02X ",routingTable_exact.RTEs[i]->next_hop_mac[0],
             routingTable_exact.RTEs[i]->next_hop_mac[1],routingTable_exact.RTEs[i]->next_hop_mac[2],routingTable_exact.RTEs[i]->next_hop_mac[3],
             routingTable_exact.RTEs[i]->next_hop_mac[4],routingTable_exact.RTEs[i]->next_hop_mac[5]);
-            printf("%d %d\n",routingTable_exact.RTEs[i]->distance,routingTable_exact.RTEs[i]->ttl);
+            printf("%d %d %d\n",routingTable_exact.RTEs[i]->distance,routingTable_exact.RTEs[i]->ttl,routingTable_exact.RTEs[i]->src_device_id);
         }
     }
     pthread_rwlock_unlock(&(routingTable_exact.rwlock));
@@ -498,9 +498,12 @@ void forward(packet_t packet){
         memcpy(packet.packet,&ethHdr,sizeof(eth_hdr_t));
         memcpy(packet.packet+sizeof(eth_hdr_t),&ipHdr,sizeof(ip_hdr_t));
         int ret = pcap_sendpacket(currDevices[device_id]->pcapHandler,packet.packet,packet.len);
-        // if(TEST_MODE == 5||TEST_MODE >= 8){
-        //     printf("find next hop send %d\n",ret);
-        // }
+        if(TEST_MODE == 5||TEST_MODE >= 8){
+            printf("find next hop send %d\n",device_id);
+            printf("send from %d.%d.%d.%d\n",(currDevices[device_id]->ip&0xff),((currDevices[device_id]->ip>>8)&0xff),((currDevices[device_id]->ip>>16)&0xff),((currDevices[device_id]->ip>>24)&0xff));
+            printf("next hop mac: %02x:%02x:%02x:%02x:%02x:%02x\n",next_hop_mac[0],next_hop_mac[1],next_hop_mac[2],next_hop_mac[3]
+            ,next_hop_mac[4],next_hop_mac[5]);
+        }
     }
 
 }
