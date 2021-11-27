@@ -203,7 +203,7 @@ int parseTCPPacket(int sockfd,packet_t packet,ip_hdr_t ipHdr,tcp_hdr_t tcpHdr){
             }
             int hdrLen = sizeof(eth_hdr_t)+sizeof(ip_hdr_t)+sizeof(tcp_hdr_t);
             int cLen = packet.len-hdrLen-sizeof(checksum_t);
-            if(cLen > 0&&sockets[sockfd]->ack_num == seq){
+            if(cLen > 0&&sockets[sockfd]&&sockets[sockfd]->ack_num == seq){
                 write_rw_buf(&(sockets[sockfd]->receive_buf),packet.packet+hdrLen,cLen);
                 sockets[sockfd]->ack_num += cLen;
             }
@@ -219,7 +219,7 @@ int parseTCPPacket(int sockfd,packet_t packet,ip_hdr_t ipHdr,tcp_hdr_t tcpHdr){
             }
         int hdrLen = sizeof(eth_hdr_t)+sizeof(ip_hdr_t)+sizeof(tcp_hdr_t);
         int cLen = packet.len-hdrLen-sizeof(checksum_t);
-        if(cLen > 0&&seq == sockets[sockfd]->ack_num){
+        if(cLen > 0&&sockets[sockfd]&&seq == sockets[sockfd]->ack_num){
             printf("content: %s\nand send ACK back\n",packet.packet+hdrLen);
             write_rw_buf(&(sockets[sockfd]->receive_buf),packet.packet+hdrLen,cLen);
             uint16_t flag = set_ACK(0);

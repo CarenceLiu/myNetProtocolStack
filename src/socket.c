@@ -24,6 +24,11 @@ void * read_rw_thread(void * t){
         //     printf("begin send a content\n");
         clock_t start;
         segment_t content = read_rw_buf_block_new(&(sockets[index]->send_buf));
+        if(sockets[index]&&sockets[index]->state == CLOSED){
+            free(sockets[index]);
+            sockets[index] = NULL;
+            return NULL;
+        }
         uint32_t seq_num = sockets[index]->seq_num;
         int times = 0;
         while(times < 5){
@@ -236,6 +241,7 @@ int __wrap_close(int fildes){
         uint16_t flag = set_FIN(0);
         int fin_times = 0;
         clock_t start;
+        sockets[index]->state = FIN_WAIT_1;
         //retrans if miss
         while(fin_times < 3){
             sendTCPPacket(fildes,NULL,0,sockets[index]->seq_num,sockets[index]->ack_num,flag);
@@ -248,10 +254,7 @@ int __wrap_close(int fildes){
         }
     }
     else if(sockets[index]->state == CLOSED){
-        if(pthread_cancel(sockets[index]->send_thread) == 0){
-            free(sockets[index]);
-            sockets[index] = NULL;
-        }
+        pthread_cond_signal(&(sockets[index]->send_buf.empty));
     }
     return 0;
 }
